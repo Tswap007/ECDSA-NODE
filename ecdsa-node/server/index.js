@@ -2,6 +2,12 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const port = 3042;
+const secp = require("ethereum-cryptography/secp256k1");
+const { keccak256 } = require("ethereum-cryptography/keccak");
+const { utf8ToBytes } = require("ethereum-cryptography/utils");
+const { toHex } = require("ethereum-cryptography/utils");
+
+
 
 app.use(cors());
 app.use(express.json());
@@ -16,6 +22,18 @@ app.get("/balance/:address", (req, res) => {
   const { address } = req.params;
   const balance = balances[address] || 0;
   res.send({ balance });
+});
+
+//vefify signature endpoint
+app.post("/verify", (req, res) => {
+  const { message, signature } = req.body;
+  const messageHash = keccak256(utf8ToBytes(message));
+  const publicKey = secp.recoverPublicKey(messageHash, signature);
+  const address = "0x" + toHex(keccak256(publicKey.slice(0).slice(-20)));
+  const isValid = address === sender;
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST');
+  res.send({ isValid });
 });
 
 app.post("/send", (req, res) => {
